@@ -33,3 +33,39 @@
         name: 'vagrant'
         groups: docker
         append: yes 
+
+    - name: Copy authorized keys
+      ansible.builtin.copy:
+        src: ~/.ssh/id_rsa.pub
+        dest: ~/.ssh/authorized_keys.host
+
+    - name: Check if authorized key already added
+      command: grep -f ~/.ssh/authorized_keys.host ~/.ssh/authorized_keys
+      changed_when: False
+      register: auth_keys_out
+      ignore_errors: true
+
+    - name: Append to authorized key
+      command: /bin/bash -c "cat ~/.ssh/authorized_keys.host >> ~/.ssh/authorized_keys"
+      when: auth_keys_out.stdout == ''
+
+    - name: create docker config folder
+      ansible.builtin.file:
+        path: ~/.docker
+        state: directory 
+
+    - name: setup docker proxy
+      ansible.builtin.copy: 
+        dest: ~/.docker/config.json
+        content: |
+          {
+            "proxies":
+            {
+              "default":
+              {
+                "httpProxy": "{{ proxy }}",
+                "httpsProxy": "{{ proxy }}",
+                "noProxy": "{{ no_proxy }}"
+              }
+            }
+          }
